@@ -18,7 +18,24 @@ const getUsers = asyncWrapper(
 
 const login = asyncWrapper(
     async (req,res,next)=>{
-        
+        const {email,password}= req.body
+        if(!email || !password){
+            const error = appError.create('email and password are required',400,httpStausText.FAIL)
+            return next(error)
+        }
+        const user = await Users.findOne({email:email})
+        if(!user){
+            const error = appError.create('user not found',400,httpStausText.FAIL)
+            return next(error)
+        }
+        const matchedPassword = bcrypt.compare(password,user.password)
+        if(matchedPassword){
+            const token = await jwtGen({email:user.email,id:user.id,role:user.role})
+            return res.status(201).json({status:httpStausText.SUCCESS,data:{token}})
+        }else{
+            const error = appError.create('password wrong',500,httpStausText.FAIL)
+            return next(error)
+        }
     }
 )
 
@@ -31,7 +48,10 @@ const register = asyncWrapper(
         }
         const hashedPassword = await bcrypt.hash(req.body.password,10)
         const newUser = new Users({
-            ...req.body,
+            firsrName:firsrName,
+            lastName:lastName,
+            email:email,
+            phoneNumber:phoneNumber,
             password:hashedPassword,
             avatar:req.file.filename
         })
@@ -42,11 +62,6 @@ const register = asyncWrapper(
     }
 )
 
-const deleteUser = asyncWrapper(
-    async (req,res,next)=>{
-        
-    }
-)
 
 
 module.exports = {
